@@ -14,7 +14,17 @@ import jieba.posseg as pseg
 
 
 def get_ocr_result(model, path='./img_for_demo/healthrecord_original.jpg'):
+    '''get ocr result using the chosen model
     
+    Args:
+        model: CTPN+CRNN model
+        path: the path for image need to be processed
+        
+    Returns:
+        result: python dict, {key:[[bound box coordinates], text_str]}
+        img: image matrix
+    
+    '''
     im = Image.open(path)
     img = np.array(im.convert('RGB'))
     t = time.time()
@@ -23,63 +33,99 @@ def get_ocr_result(model, path='./img_for_demo/healthrecord_original.jpg'):
     
     return result, img
 
-def str_similarity(str_1, str_2, num_alpha_chn_filter=True):
+def str_similarity(str_1, str_2, num_alpha_chn_filter=True, sliding=True):
+    '''compute the similarity between two strings
     
+    Args:
+        str_1: string
+        str_2: string
+        num_alpha_chn_filter: boolean
+            whether to filter out characters which are not num, alphabet, chn
+        sliding: boolean
+            whether to use sliding method for computing similarity
     
+    Returns:
+        similarity: the similarity between two strings
     
-    if len(str_1) > len(str_2):
-        shorter = str_2
-        longer = str_1
+    '''
+    if sliding == False:
+        return Levenshtein.distance(str_1.upper(), str_2.upper()) / len(str_2)
+    
     else:
-        shorter = str_1
-        longer = str_2
+        if len(str_1) > len(str_2):
+            shorter = str_2
+            longer = str_1
+        else:
+            shorter = str_1
+            longer = str_2
+            
+        if num_alpha_chn_filter: 
+            re_pattern = re.compile(r'[^A-Za-z0-9\u4e00-\u9fa5]')
+            shorter = re.sub(re_pattern, '', shorter)
+            longer = re.sub(re_pattern, '', longer)
         
-    if num_alpha_chn_filter: 
-        re_pattern = re.compile(r'[^A-Za-z0-9\u4e00-\u9fa5]')
-        shorter = re.sub(re_pattern, '', shorter)
-        longer = re.sub(re_pattern, '', longer)
+        if len(shorter) < 3:
+            return 100
+        
+        start_ind = 0
+        end_ind = len(longer) - len(shorter)
+        
+        if start_ind == end_ind:
+            return Levenshtein.distance(longer, shorter) / len(shorter)
+        
+        similarity = 1
+        for ind in range(start_ind, end_ind + 1):
+            s = Levenshtein.distance(longer[ind: (ind+len(shorter))], shorter) / len(shorter)
+            if s < similarity:
+                similarity = s
+#        print(similarity, shorter, longer)
     
-    if len(shorter) < 3:
-        return 100
-    
-    start_ind = 0
-    end_ind = len(longer) - len(shorter)
-    
-    if start_ind == end_ind:
-        return Levenshtein.distance(longer, shorter) / len(shorter)
-    
-    similarity = 1
-    
-    for ind in range(start_ind, end_ind + 1):
-        s = Levenshtein.distance(longer[ind: (ind+len(shorter))], shorter) / len(shorter)
-        if s < similarity:
-            similarity = s
-#     print(similarity, shorter, longer)
-    return similarity
-#    return Levenshtein.distance(str_1.upper(), str_2.upper()) / len(str_2)
+        return similarity
+
 #    return Levenshtein.ratio(str_1, str_2)
 
 
+
 def ocr_result_to_df(ocr_result, title_path='./med_dict/title_name.csv', item_name_path='./med_dict/item_name.csv'):
+    '''extract items infomation from ocr result and save to dataframe
+    ocr_result will be modified according to the two dictionary files
+    
+    Args:
+        ocr_result: dict, output of ocr, in the form of {key:[[bound box coordinates], text_str]}
+        title_path: path to title name dictionary
+        item_name_path: path to item name dictionary
+
+    
+    Returns:
+        df_output: dataframe
+            column names are the texts on the line of item
+    
+    '''
+    ##############
     # find title
+    ##############
     df = pd.read_csv(title_path)
 
     title_key = -1
     flag = False
     for key in ocr_result:
         for ind in range(len(df['col_names'])):
-            if str_similarity(ocr_result[key][1], df['col_names'][ind]) < 0.33:
+            if str_similarity(ocr_result[key][1], df['col_names'][ind], sliding=False) < 0.33:
                 flag = True
                 title_key = key
                 ocr_result[key][1] = df['col_names'][ind]
                 break
-            else: continue        
+            else: continue
         if flag: 
             break 
     
     tmp_dict = {}
     for key in ocr_result:
         if abs(ocr_result[key][0][1] - ocr_result[title_key][0][1]) <= 10:
+            for ind in range(len(df['col_names'])):
+                if str_similarity(ocr_result[key][1], df['col_names'][ind], sliding=False) < 0.33:
+                    ocr_result[key][1] = df['col_names'][ind]
+                    break
             tmp_dict[key] = ocr_result[key]
     #根据result_copy[key][0][0]排序
     tmp_dict = dict(sorted(tmp_dict.items(), key=lambda x:x[1][0][0]))
@@ -89,7 +135,9 @@ def ocr_result_to_df(ocr_result, title_path='./med_dict/title_name.csv', item_na
         col_name.append(tmp_dict[key][1])
     df_output = pd.DataFrame(columns=col_name)
     
+    ###############
     # find item
+    ###############
     df_item = pd.read_csv(item_name_path)
 
     item_keys = []
@@ -98,11 +146,19 @@ def ocr_result_to_df(ocr_result, title_path='./med_dict/title_name.csv', item_na
         if ind in tmp_dict.keys():
             continue
         else:
-            for jnd in range(len(df_item['item_names'])):
-                if str_similarity(ocr_result[ind][1], df_item['item_names'][jnd]) < 0.33:
-                    if ind not in item_keys:
-                        item_keys.append(ind)
-                        ocr_result[ind][1] = df_item['item_names'][jnd]
+            similarity_dict = {}
+            for jnd in range(len(df_item['item_names'])):              
+                similarity = str_similarity(ocr_result[ind][1], df_item['item_names'][jnd], sliding=False)
+                if similarity < 0.33:
+                    similarity_dict[jnd] = similarity
+                    
+            if similarity_dict:
+                item_keys.append(ind)
+                ocr_result[ind][1] = df_item['item_names'][min(similarity_dict,key=similarity_dict.get)]
+
+#             if ind not in item_keys:
+#                 item_keys.append(ind)
+#                 ocr_result[ind][1] = df_item['item_names'][jnd]
                     
     # item_keys
     for item_key in item_keys:
@@ -122,8 +178,19 @@ def ocr_result_to_df(ocr_result, title_path='./med_dict/title_name.csv', item_na
     return df_output
 
 
-def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', surname_path='./med_dict/surname.csv'):
+def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv'):
+    '''extract basic infomation from ocr result and save to dictionary
     
+    Args:
+        ocr_result: dict, output of ocr, in the form of {key:[[bound box coordinates], text_str]}
+        hospital_path: path to hospital name dictionary
+
+    
+    Returns: dict
+            {'hospital':hospital, 'doctor':doctor, 'name':name, 'sex':sex,\
+            'date':date, 'diagnosis':diagnosis, 'total':total, 'paid':paid}
+    
+    '''
     hospital = None
     doctor = None
     name = None
@@ -138,10 +205,8 @@ def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', 
     paid = None
     
     df_hospital = pd.read_csv(hospital_path)
-    
+    # name
     for key in ocr_result:
-        
-        # name
         if name_flag:
             continue
         # limits the length of name string
@@ -189,7 +254,7 @@ def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', 
     
     for key in ocr_result:
         
-        #diagnosis
+        # diagnosis
         if str('diagnosis') in ocr_result[key][1].lower()[:10]:
 #            print(key, ocr_result[key][1])
             if len(ocr_result[key][1]) < 7:
@@ -207,11 +272,11 @@ def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', 
                 diagnosis = ocr_result[key][1][posi:]
             continue
         
-        #sex
+        # sex
         if ocr_result[key][1] in sex_str:
             sex = ocr_result[key][1]
             continue
-        #dr
+        # doctor
         if len(ocr_result[key][1]) > 4:
             if str('dr') in ocr_result[key][1].lower()[:4]:
                 posi = ocr_result[key][1].lower().find('dr')
@@ -221,7 +286,7 @@ def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', 
                 posi = ocr_result[key][1].lower().find('dr.')
                 posi = posi + 3
                 doctor = ocr_result[key][1][posi:]
-        #date
+        # date
         if str('date:') in ocr_result[key][1].lower():
 #            print(key, ocr_result[key][1])
             if len(ocr_result[key][1]) < 7:
@@ -238,7 +303,7 @@ def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', 
                 posi = posi + 5
                 date = ocr_result[key][1][posi:]
             continue
-        #hospital
+        # hospital
         for ind in range(len(df_hospital['hospital_names'])):
             if str_similarity(ocr_result[key][1], df_hospital['hospital_names'][ind]) < 0.33:
                 ocr_result[key][1] = df_hospital['hospital_names'][ind]
@@ -246,7 +311,7 @@ def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', 
                 break
             else: continue
         
-        #total
+        # total
         if len(ocr_result[key][1]) > 8:
             continue
         if str_similarity('total:', ocr_result[key][1]) < 0.33:
@@ -262,7 +327,7 @@ def get_basic_info_df(ocr_result, hospital_path='./med_dict/hospital_name.csv', 
                     break
             continue
                
-        #paid
+        # paid
         if len(ocr_result[key][1]) > 6:
             continue
         if str_similarity('paid:', ocr_result[key][1]) < 0.33:
@@ -347,7 +412,7 @@ def match_img_keyword(target_text, keyword, threshold=0.3):
         result: float
     '''
     filter_text = longest_common_subsequence(target_text, keyword)
-    ratio = str_similarity(filter_text, keyword, num_alpha_chn_filter=False)
+    ratio = str_similarity(filter_text, keyword, num_alpha_chn_filter=False, sliding=False)
     result = ratio < threshold
     return result
 
@@ -396,7 +461,7 @@ def classify_text(raw_text, threshold=0.3):
                     img_distance = (img_type.name, 0)
                     heapq.heappush(cal_result_list, img_distance)
                     break
-                ratio = str_similarity(str1, str2, num_alpha_chn_filter=False)
+                ratio = str_similarity(str1, str2, num_alpha_chn_filter=False, sliding=False)
                 if ratio < threshold:
                     img_distance = (img_type.name, ratio)
                     heapq.heappush(cal_result_list, img_distance)
