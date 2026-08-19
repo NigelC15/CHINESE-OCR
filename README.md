@@ -1,5 +1,21 @@
 # 本文基于tensorflow、keras/pytorch实现对自然场景的文字检测及端到端的OCR中文文字识别
 
+> [!IMPORTANT]
+> **维护状态：历史项目 / maintenance only。** 本仓库基于 Python 3.6、
+> TensorFlow 1.x 和较早版本的 Keras/PyTorch，保留用于研究复现与社区参考。
+> 目前不再进行功能开发，问题回复可能较慢。新用户请先阅读现有 Issue，并注意
+> 依赖版本与下载链接可能已经过期。
+
+> Xiaofeng Shi 当前的研究工作聚焦于专业领域大模型、后训练、Agent 与多模态推理：
+> [GitHub 主页](https://github.com/xiaofengShi) ·
+> [个人网站](https://xiaofengshi.com/) ·
+> [Hugging Face](https://huggingface.co/XiaofengAlg)
+
+## 许可证说明
+
+本仓库目前没有附带明确的开源许可证，因此默认版权仍由作者保留。如需商业使用、
+再分发或大规模衍生开发，请先与维护者联系确认授权。
+
 # update20190706
 
 - 为解决本项目中对数学公式预测的准确性，做了其他的改进和尝试，效果还不错，https://github.com/xiaofengShi/Image2Katex 希望能有所帮助，另外，这几月换了工作，并且转了方向，还是cv方向，不过不做ocr相关了，目前主要做显著目标检测以及搜索意图相关，对repo的提问回答较慢，请见谅。
@@ -229,4 +245,3 @@ https://pan.baidu.com/s/1dFda6R3
 - [tensorflow-crnn](https://github.com/ilovin/lstm_ctc_ocr)
 - [tensorflow-ctpn](https://github.com/eragonruan/text-detection-ctpn )
 - [CAFFE-CTPN](https://github.com/tianzhi0549/CTPN)
-
