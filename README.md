@@ -245,3 +245,14 @@ https://pan.baidu.com/s/1dFda6R3
 - [tensorflow-crnn](https://github.com/ilovin/lstm_ctc_ocr)
 - [tensorflow-ctpn](https://github.com/eragonruan/text-detection-ctpn )
 - [CAFFE-CTPN](https://github.com/tianzhi0549/CTPN)
+
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=xiaofengShi%2FCHINESE-OCR&type=date&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiaofengShi/CHINESE-OCR&type=date&theme=dark&legend=bottom-right&sealed_token=UGM0LGoDsoI-JKTH9tSYChfsvy2ke5pz2w9pDMSAdzeuqWi5qVPpACAkthHlM-utY44E--zCy6j3rjOcNWsuK93zTvktqowU6V_eYfldk-1_yM3BkH8Dsw" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiaofengShi/CHINESE-OCR&type=date&legend=bottom-right&sealed_token=UGM0LGoDsoI-JKTH9tSYChfsvy2ke5pz2w9pDMSAdzeuqWi5qVPpACAkthHlM-utY44E--zCy6j3rjOcNWsuK93zTvktqowU6V_eYfldk-1_yM3BkH8Dsw" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiaofengShi/CHINESE-OCR&type=date&legend=bottom-right&sealed_token=UGM0LGoDsoI-JKTH9tSYChfsvy2ke5pz2w9pDMSAdzeuqWi5qVPpACAkthHlM-utY44E--zCy6j3rjOcNWsuK93zTvktqowU6V_eYfldk-1_yM3BkH8Dsw" />
+ </picture>
+</a>
